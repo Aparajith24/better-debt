@@ -14,6 +14,11 @@ enum DebtType {
   OTHER
 }
 
+enum RateType {
+  FLAT
+  REDUCING
+}
+
 model Debt {
   id        String   @id @default(uuid())
   userId    String
@@ -21,6 +26,7 @@ model Debt {
   type      DebtType
   principal Decimal? @db.Decimal(14, 2)
   currentBalance Decimal @db.Decimal(14, 2)
+  rateType   RateType @default(REDUCING)
   interestRateAnnual Decimal @db.Decimal(6, 3)
   minPayment Decimal? @db.Decimal(14, 2)
   dueDay     Int?     // day of month, 1-31
