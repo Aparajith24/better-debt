@@ -36,7 +36,7 @@ export default function CreditCardPage() {
 
   return (
     <div className="flex flex-1 justify-center bg-zinc-50 dark:bg-black">
-      <main className="w-full max-w-xl px-6 py-12">
+      <main className="w-full max-w-5xl px-6 py-8 lg:px-10">
         <Link href="/calculators" className="text-sm text-zinc-500 hover:underline">
           ← Calculators
         </Link>
@@ -48,92 +48,93 @@ export default function CreditCardPage() {
           that&apos;s really costing you.
         </p>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
-        >
-          <Field label="Current balance (₹)">
-            <input
-              required
-              type="number"
-              min={0}
-              step="0.01"
-              value={currentBalance}
-              onChange={(e) => setCurrentBalance(e.target.value)}
-              className="input"
-            />
-          </Field>
-          <Field label="Interest rate (APR %)">
-            <input
-              required
-              type="number"
-              min={0}
-              max={100}
-              step="0.01"
-              value={interestRateAnnual}
-              onChange={(e) => setInterestRateAnnual(e.target.value)}
-              className="input"
-            />
-          </Field>
-          <Field label="Monthly payment (₹)">
-            <input
-              required
-              type="number"
-              min={0}
-              step="0.01"
-              value={monthlyPayment}
-              onChange={(e) => setMonthlyPayment(e.target.value)}
-              className="input"
-            />
-          </Field>
-          <Field label="Planned new spending per month (₹)" optional>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              value={monthlyNewSpend}
-              onChange={(e) => setMonthlyNewSpend(e.target.value)}
-              className="input"
-              placeholder="0"
-            />
-          </Field>
-          <button
-            type="submit"
-            disabled={running}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+        <div className="lg:grid lg:grid-cols-[360px_1fr] lg:items-start lg:gap-6">
+          <form
+            onSubmit={handleSubmit}
+            className="mb-6 flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-6 lg:mb-0 dark:border-zinc-800 dark:bg-zinc-900"
           >
-            {running ? "Calculating…" : "Calculate"}
-          </button>
-        </form>
-
-        {error && (
-          <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-            {error}
-          </p>
-        )}
-
-        {result && (
-          <div className="mt-6 flex flex-col gap-4">
-            {Number(result.costOfContinuedSpending) > 0 && (
-              <div className="rounded-xl border border-zinc-900 bg-zinc-900 p-5 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900">
-                <p className="text-sm">
-                  Continuing to spend on this card costs you an extra{" "}
-                  <span className="font-semibold">
-                    {formatCurrency(result.costOfContinuedSpending)}
-                  </span>{" "}
-                  in interest compared to not spending at all.
-                </p>
-              </div>
-            )}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <ScenarioCard
-                title="With continued spending"
-                projection={result.withContinuedSpending}
+            <Field label="Current balance (₹)">
+              <input
+                required
+                type="number"
+                min={0}
+                step="0.01"
+                value={currentBalance}
+                onChange={(e) => setCurrentBalance(e.target.value)}
+                className="input"
               />
-              <ScenarioCard title="No new spending" projection={result.baseline} />
+            </Field>
+            <Field label="Interest rate (APR %)">
+              <input
+                required
+                type="number"
+                min={0}
+                max={100}
+                step="0.01"
+                value={interestRateAnnual}
+                onChange={(e) => setInterestRateAnnual(e.target.value)}
+                className="input"
+              />
+            </Field>
+            <Field label="Monthly payment (₹)">
+              <input
+                required
+                type="number"
+                min={0}
+                step="0.01"
+                value={monthlyPayment}
+                onChange={(e) => setMonthlyPayment(e.target.value)}
+                className="input"
+              />
+            </Field>
+            <Field label="Planned new spending per month (₹)" optional>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={monthlyNewSpend}
+                onChange={(e) => setMonthlyNewSpend(e.target.value)}
+                className="input"
+                placeholder="0"
+              />
+            </Field>
+            <button
+              type="submit"
+              disabled={running}
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+            >
+              {running ? "Calculating…" : "Calculate"}
+            </button>
+            {error && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+                {error}
+              </p>
+            )}
+          </form>
+
+          {result && (
+            <div className="flex flex-col gap-4">
+              {Number(result.costOfContinuedSpending) > 0 && (
+                <div className="rounded-xl border border-zinc-900 bg-zinc-900 p-6 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900">
+                  <p className="text-sm">
+                    Continuing to spend on this card costs you an extra{" "}
+                    <span className="font-semibold">
+                      {formatCurrency(result.costOfContinuedSpending)}
+                    </span>{" "}
+                    in interest compared to not spending at all.
+                  </p>
+                </div>
+              )}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <ScenarioCard
+                  title="With continued spending"
+                  projection={result.withContinuedSpending}
+                />
+                <ScenarioCard title="No new spending" projection={result.baseline} />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );

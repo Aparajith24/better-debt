@@ -29,19 +29,19 @@ const CALCULATORS = [
 export default function CalculatorsPage() {
   return (
     <div className="flex flex-1 justify-center bg-zinc-50 dark:bg-black">
-      <main className="w-full max-w-3xl px-6 py-12">
+      <main className="w-full max-w-7xl px-6 py-8 lg:px-10">
         <h1 className="mb-8 text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
           Calculators
         </h1>
-        <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {CALCULATORS.map((calc) => (
             <Link
               key={calc.href}
               href={calc.href}
-              className="rounded-xl border border-zinc-200 bg-white p-5 transition-colors hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600"
+              className="rounded-xl border border-zinc-200 bg-white p-6 transition-colors hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600"
             >
               <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">{calc.title}</h2>
-              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{calc.description}</p>
+              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{calc.description}</p>
             </Link>
           ))}
         </div>

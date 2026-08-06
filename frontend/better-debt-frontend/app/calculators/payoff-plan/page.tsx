@@ -72,7 +72,7 @@ export default function PayoffPlanPage() {
 
   return (
     <div className="flex flex-1 justify-center bg-zinc-50 dark:bg-black">
-      <main className="w-full max-w-6xl px-6 py-8">
+      <main className="w-full max-w-[1600px] px-6 py-8 lg:px-10">
         <Link href="/calculators" className="text-sm text-zinc-500 hover:underline">
           ← Calculators
         </Link>
@@ -257,15 +257,14 @@ function ResultView({ result, debts }: { result: PayoffPlanComparison; debts: De
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <BalanceChart avalanche={result.avalanche} snowball={result.snowball} />
-        <MonthlyPaymentTable
-          avalanche={result.avalanche}
-          snowball={result.snowball}
-          defaultStrategy={defaultStrategy}
-          nameFor={nameFor}
-        />
-      </div>
+      <BalanceChart avalanche={result.avalanche} snowball={result.snowball} />
+
+      <MonthlyPaymentTable
+        avalanche={result.avalanche}
+        snowball={result.snowball}
+        defaultStrategy={defaultStrategy}
+        nameFor={nameFor}
+      />
     </div>
   );
 }

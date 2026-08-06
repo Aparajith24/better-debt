@@ -45,7 +45,7 @@ export function MonthlyPaymentTable({
         </div>
       </div>
 
-      <div className="max-h-96 overflow-y-auto">
+      <div className="max-h-[480px] overflow-y-auto">
         <table className="w-full text-left text-xs">
           <thead className="sticky top-0 bg-white dark:bg-zinc-900">
             <tr className="border-b border-zinc-200 text-zinc-400 dark:border-zinc-800">

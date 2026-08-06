@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError, type Debt, type DebtInput } from "@/lib/api";
 import { DebtForm } from "@/components/DebtForm";
 import { DebtCard } from "@/components/DebtCard";
+import { formatCurrency } from "@/lib/format";
 
 type ViewState = { mode: "list" } | { mode: "create" } | { mode: "edit"; debt: Debt };
 
@@ -56,20 +57,18 @@ export default function Home() {
   }
 
   const totalBalance = debts.reduce((sum, d) => sum + Number(d.currentBalance), 0);
+  const totalMinPayment = debts.reduce((sum, d) => sum + Number(d.minPayment ?? 0), 0);
+  const weightedAvgRate =
+    totalBalance > 0
+      ? debts.reduce((sum, d) => sum + Number(d.currentBalance) * Number(d.interestRateAnnual), 0) /
+        totalBalance
+      : 0;
 
   return (
     <div className="flex flex-1 justify-center bg-zinc-50 dark:bg-black">
-      <main className="w-full max-w-3xl px-6 py-12">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Your debts</h1>
-            {debts.length > 0 && (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Total balance: ₹
-                {totalBalance.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-              </p>
-            )}
-          </div>
+      <main className="w-full max-w-7xl px-6 py-8 lg:px-10">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">Your debts</h1>
           {view.mode === "list" && (
             <button
               onClick={() => setView({ mode: "create" })}
@@ -80,14 +79,23 @@ export default function Home() {
           )}
         </div>
 
+        {debts.length > 0 && (
+          <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatTile label="Total balance" value={formatCurrency(totalBalance)} />
+            <StatTile label="Total minimum payments" value={formatCurrency(totalMinPayment)} />
+            <StatTile label="Weighted avg. rate" value={`${weightedAvgRate.toFixed(2)}%`} />
+            <StatTile label="Open debts" value={debts.length.toString()} />
+          </div>
+        )}
+
         {view.mode === "create" && (
-          <div className="mb-8">
+          <div className="mb-8 max-w-2xl">
             <DebtForm onSubmit={handleCreate} onCancel={() => setView({ mode: "list" })} />
           </div>
         )}
 
         {view.mode === "edit" && (
-          <div className="mb-8">
+          <div className="mb-8 max-w-2xl">
             <DebtForm
               initial={view.debt}
               onSubmit={(input) => handleUpdate(view.debt.id, input)}
@@ -109,7 +117,7 @@ export default function Home() {
             No debts yet. Add your first one to get started.
           </p>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {debts.map((debt) => (
               <DebtCard
                 key={debt.id}
@@ -122,6 +130,15 @@ export default function Home() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+function StatTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="text-xs text-zinc-500 dark:text-zinc-400">{label}</div>
+      <div className="mt-1 text-xl font-semibold text-zinc-900 dark:text-zinc-50">{value}</div>
     </div>
   );
 }

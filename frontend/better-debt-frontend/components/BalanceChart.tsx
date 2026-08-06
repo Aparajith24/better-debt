@@ -9,9 +9,9 @@ interface BalanceChartProps {
   snowball: MultiDebtPlan;
 }
 
-const WIDTH = 640;
-const HEIGHT = 280;
-const PAD = { top: 16, right: 16, bottom: 28, left: 64 };
+const WIDTH = 1100;
+const HEIGHT = 460;
+const PAD = { top: 16, right: 16, bottom: 28, left: 72 };
 const PLOT_W = WIDTH - PAD.left - PAD.right;
 const PLOT_H = HEIGHT - PAD.top - PAD.bottom;
 
