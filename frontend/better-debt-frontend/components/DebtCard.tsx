@@ -1,6 +1,7 @@
 "use client";
 
 import type { Debt } from "@/lib/api";
+import { formatCurrency } from "@/lib/format";
 
 const TYPE_LABELS: Record<Debt["type"], string> = {
   CREDIT_CARD: "Credit card",
@@ -9,10 +10,6 @@ const TYPE_LABELS: Record<Debt["type"], string> = {
   BNPL: "BNPL",
   OTHER: "Other",
 };
-
-function formatCurrency(value: string) {
-  return `₹${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
 
 interface DebtCardProps {
   debt: Debt;

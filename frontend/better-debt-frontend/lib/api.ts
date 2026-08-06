@@ -60,6 +60,79 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// ---- Calculators ----
+
+export interface SingleDebtProjection {
+  months: number;
+  payoffAchieved: boolean;
+  totalInterest: string;
+  totalPaid: string;
+  schedule: { month: number; interest: string; principal: string; balance: string }[];
+}
+
+export interface PayoffPlanDebtInput {
+  id: string;
+  balance: number;
+  rateType?: RateType;
+  interestRateAnnual: number;
+  minPayment: number;
+  principal?: number;
+  tenureMonths?: number;
+}
+
+export interface MultiDebtPlan {
+  strategy: "avalanche" | "snowball";
+  payoffAchieved: boolean;
+  totalMonths: number;
+  totalInterestPaid: string;
+  totalPaid: string;
+  payoffOrder: string[];
+  debts: { id: string; payoffMonth: number | null; totalInterestPaid: string }[];
+  monthlySummary: { month: number; totalBalance: string; interestThisMonth: string }[];
+}
+
+export interface PayoffPlanComparison {
+  ratesUsed: {
+    id: string;
+    rateType: RateType;
+    quotedRateAnnual: number;
+    effectiveRateAnnual: number;
+  }[];
+  avalanche: MultiDebtPlan;
+  snowball: MultiDebtPlan;
+  comparison: { interestSavedByAvalanche: string; monthsSavedByAvalanche: number };
+}
+
+export interface FlatRateNormalization {
+  principal: number;
+  flatRateAnnual: number;
+  tenureMonths: number;
+  monthlyEMI: string;
+  equivalentReducingBalanceAPR: string;
+  multiplier: string;
+}
+
+export interface CreditCardProjection {
+  months: number;
+  payoffAchieved: boolean;
+  totalInterest: string;
+  totalNewSpend: string;
+  totalPaid: string;
+  schedule: {
+    month: number;
+    newSpend: string;
+    interest: string;
+    payment: string;
+    balance: string;
+  }[];
+}
+
+export interface CreditCardComparison {
+  withContinuedSpending: CreditCardProjection;
+  baseline: CreditCardProjection;
+  costOfContinuedSpending: string;
+}
+
 export const api = {
   listDebts: () => request<Debt[]>("/debts"),
   getDebt: (id: string) => request<Debt>(`/debts/${id}`),
@@ -68,4 +141,41 @@ export const api = {
   updateDebt: (id: string, input: Partial<DebtInput> & { isActive?: boolean }) =>
     request<Debt>(`/debts/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteDebt: (id: string) => request<void>(`/debts/${id}`, { method: "DELETE" }),
+
+  singleDebtProjection: (input: {
+    balance: number;
+    interestRateAnnual: number;
+    monthlyPayment: number;
+  }) =>
+    request<SingleDebtProjection>("/calculators/single-debt-projection", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+
+  payoffPlan: (input: { debts: PayoffPlanDebtInput[]; extraMonthlyBudget: number }) =>
+    request<PayoffPlanComparison>("/calculators/payoff-plan", {
+      method: "POST",
+      body: JSON.stringify({ ...input, strategy: "both" }),
+    }),
+
+  normalizeFlatRate: (input: {
+    principal: number;
+    flatRateAnnual: number;
+    tenureMonths: number;
+  }) =>
+    request<FlatRateNormalization>("/calculators/normalize-flat-rate", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+
+  creditCardProjection: (input: {
+    currentBalance: number;
+    interestRateAnnual: number;
+    monthlyPayment: number;
+    monthlyNewSpend?: number;
+  }) =>
+    request<CreditCardComparison>("/calculators/credit-card-projection", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
 };

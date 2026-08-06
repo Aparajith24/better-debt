@@ -11,7 +11,10 @@ const app = Fastify({
   },
 });
 
-await app.register(cors, { origin: true });
+await app.register(cors, {
+  origin: true,
+  methods: ["GET", "POST", "PATCH", "DELETE"],
+});
 
 app.setErrorHandler((err, req, reply) => {
   if (err instanceof ZodError) {
