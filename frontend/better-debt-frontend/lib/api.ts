@@ -88,7 +88,12 @@ export interface MultiDebtPlan {
   totalPaid: string;
   payoffOrder: string[];
   debts: { id: string; payoffMonth: number | null; totalInterestPaid: string }[];
-  monthlySummary: { month: number; totalBalance: string; interestThisMonth: string }[];
+  monthlySummary: {
+    month: number;
+    totalBalance: string;
+    interestThisMonth: string;
+    payments: { id: string; amount: string; balance: string }[];
+  }[];
 }
 
 export interface PayoffPlanComparison {

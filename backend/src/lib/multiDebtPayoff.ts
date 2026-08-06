@@ -15,10 +15,17 @@ export interface DebtOutcome {
   totalInterestPaid: string;
 }
 
+export interface DebtPayment {
+  id: string;
+  amount: string;
+  balance: string; // balance remaining after this month's payment
+}
+
 export interface MonthSummary {
   month: number;
   totalBalance: string;
   interestThisMonth: string;
+  payments: DebtPayment[];
 }
 
 export interface MultiDebtPlan {
@@ -102,10 +109,12 @@ export function simulateMultiDebtPayoff(
     }
 
     // 3. Pay the minimum on every still-open debt.
+    const paidThisMonth = new Map<string, Decimal>();
     for (const d of order) {
       if (d.balance.lte(0)) continue;
       const pay = Decimal.min(d.minPayment, d.balance);
       d.balance = d.balance.minus(pay);
+      paidThisMonth.set(d.id, pay);
       if (d.balance.lte(0) && d.payoffMonth === null) {
         d.payoffMonth = month;
         payoffOrder.push(d.id);
@@ -120,6 +129,7 @@ export function simulateMultiDebtPayoff(
       const pay = Decimal.min(pool, d.balance);
       d.balance = d.balance.minus(pay);
       pool = pool.minus(pay);
+      paidThisMonth.set(d.id, (paidThisMonth.get(d.id) ?? new Decimal(0)).plus(pay));
       if (d.balance.lte(0) && d.payoffMonth === null) {
         d.payoffMonth = month;
         payoffOrder.push(d.id);
@@ -130,6 +140,13 @@ export function simulateMultiDebtPayoff(
       month,
       totalBalance: order.reduce((sum, d) => sum.plus(d.balance), new Decimal(0)).toFixed(2),
       interestThisMonth: interestThisMonth.toFixed(2),
+      payments: order
+        .filter((d) => paidThisMonth.has(d.id))
+        .map((d) => ({
+          id: d.id,
+          amount: (paidThisMonth.get(d.id) ?? new Decimal(0)).toFixed(2),
+          balance: d.balance.toFixed(2),
+        })),
     });
   }
 
