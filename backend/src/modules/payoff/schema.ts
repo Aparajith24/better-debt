@@ -43,3 +43,12 @@ export const normalizeFlatRateSchema = z.object({
 });
 
 export type NormalizeFlatRateInput = z.infer<typeof normalizeFlatRateSchema>;
+
+export const creditCardProjectionSchema = z.object({
+  currentBalance: z.number().positive(),
+  interestRateAnnual: z.number().nonnegative().max(100),
+  monthlyPayment: z.number().positive(),
+  monthlyNewSpend: z.number().nonnegative().default(0),
+});
+
+export type CreditCardProjectionInput = z.infer<typeof creditCardProjectionSchema>;

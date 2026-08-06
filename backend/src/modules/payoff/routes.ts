@@ -1,8 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { projectSingleDebtPayoff } from "../../lib/amortization.js";
+import { projectCreditCardComparison } from "../../lib/creditCardPayoff.js";
 import { simulateMultiDebtPayoff } from "../../lib/multiDebtPayoff.js";
 import { normalizeFlatRateToAPR, resolveEffectiveAnnualRate } from "../../lib/rateNormalization.js";
-import { normalizeFlatRateSchema, payoffPlanSchema, singleDebtProjectionSchema } from "./schema.js";
+import {
+  creditCardProjectionSchema,
+  normalizeFlatRateSchema,
+  payoffPlanSchema,
+  singleDebtProjectionSchema,
+} from "./schema.js";
 
 export async function payoffRoutes(app: FastifyInstance) {
   // Single-debt projection: no strategy/ordering across debts yet — just
@@ -64,6 +70,22 @@ export async function payoffRoutes(app: FastifyInstance) {
   app.post("/calculators/normalize-flat-rate", async (req, reply) => {
     const { principal, flatRateAnnual, tenureMonths } = normalizeFlatRateSchema.parse(req.body);
     const result = normalizeFlatRateToAPR(principal, flatRateAnnual, tenureMonths);
+    return reply.send(result);
+  });
+
+  // Credit-card-specific projection: a carried balance means the grace period
+  // is already gone, so any new spending accrues interest immediately. Runs
+  // the payoff with the user's planned new spend vs. a no-new-spend baseline
+  // to isolate exactly how much continuing to use the card is costing them.
+  app.post("/calculators/credit-card-projection", async (req, reply) => {
+    const { currentBalance, interestRateAnnual, monthlyPayment, monthlyNewSpend } =
+      creditCardProjectionSchema.parse(req.body);
+    const result = projectCreditCardComparison(
+      currentBalance,
+      interestRateAnnual,
+      monthlyPayment,
+      monthlyNewSpend,
+    );
     return reply.send(result);
   });
 }
