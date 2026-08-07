@@ -138,6 +138,24 @@ export interface CreditCardComparison {
   costOfContinuedSpending: string;
 }
 
+export interface PrepaymentOutcome {
+  months: number;
+  totalInterest: string;
+  totalPaid: string;
+}
+
+export interface PrepaymentComparison {
+  lumpSum: number;
+  newBalanceAfterLumpSum: string;
+  baseline: PrepaymentOutcome;
+  reduceTenure: PrepaymentOutcome & { monthsSaved: number; interestSaved: string };
+  reduceEMI: PrepaymentOutcome & {
+    newMonthlyPayment: string;
+    paymentReduction: string;
+    interestSaved: string;
+  };
+}
+
 export const api = {
   listDebts: () => request<Debt[]>("/debts"),
   getDebt: (id: string) => request<Debt>(`/debts/${id}`),
@@ -180,6 +198,17 @@ export const api = {
     monthlyNewSpend?: number;
   }) =>
     request<CreditCardComparison>("/calculators/credit-card-projection", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+
+  prepayment: (input: {
+    balance: number;
+    interestRateAnnual: number;
+    monthlyPayment: number;
+    lumpSum: number;
+  }) =>
+    request<PrepaymentComparison>("/calculators/prepayment", {
       method: "POST",
       body: JSON.stringify(input),
     }),

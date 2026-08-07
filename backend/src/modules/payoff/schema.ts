@@ -52,3 +52,12 @@ export const creditCardProjectionSchema = z.object({
 });
 
 export type CreditCardProjectionInput = z.infer<typeof creditCardProjectionSchema>;
+
+export const prepaymentSchema = z.object({
+  balance: z.number().positive(),
+  interestRateAnnual: z.number().nonnegative().max(100),
+  monthlyPayment: z.number().positive(),
+  lumpSum: z.number().positive(),
+});
+
+export type PrepaymentInput = z.infer<typeof prepaymentSchema>;

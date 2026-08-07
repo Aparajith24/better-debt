@@ -2,11 +2,13 @@ import type { FastifyInstance } from "fastify";
 import { projectSingleDebtPayoff } from "../../lib/amortization.js";
 import { projectCreditCardComparison } from "../../lib/creditCardPayoff.js";
 import { simulateMultiDebtPayoff } from "../../lib/multiDebtPayoff.js";
+import { calculatePrepaymentImpact } from "../../lib/prepayment.js";
 import { normalizeFlatRateToAPR, resolveEffectiveAnnualRate } from "../../lib/rateNormalization.js";
 import {
   creditCardProjectionSchema,
   normalizeFlatRateSchema,
   payoffPlanSchema,
+  prepaymentSchema,
   singleDebtProjectionSchema,
 } from "./schema.js";
 
@@ -86,6 +88,18 @@ export async function payoffRoutes(app: FastifyInstance) {
       monthlyPayment,
       monthlyNewSpend,
     );
+    return reply.send(result);
+  });
+
+  // Prepayment impact: a lump sum can either keep the payment fixed and
+  // finish sooner (reduce tenure) or keep the tenure fixed and pay less each
+  // month (reduce EMI). Both are computed so the tradeoff is explicit rather
+  // than asserting reduce-tenure is "better."
+  app.post("/calculators/prepayment", async (req, reply) => {
+    const { balance, interestRateAnnual, monthlyPayment, lumpSum } = prepaymentSchema.parse(
+      req.body,
+    );
+    const result = calculatePrepaymentImpact(balance, interestRateAnnual, monthlyPayment, lumpSum);
     return reply.send(result);
   });
 }

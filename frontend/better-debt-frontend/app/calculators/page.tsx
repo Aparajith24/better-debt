@@ -24,6 +24,12 @@ const CALCULATORS = [
     description:
       "See what continuing to spend on a card costs you in extra interest once you're carrying a balance.",
   },
+  {
+    href: "/calculators/prepayment",
+    title: "Prepayment impact",
+    description:
+      "A lump sum can lower your payment or shorten your tenure — see exactly what each is worth in saved interest.",
+  },
 ];
 
 export default function CalculatorsPage() {
