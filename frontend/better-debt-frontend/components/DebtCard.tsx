@@ -16,14 +16,28 @@ interface DebtCardProps {
   onEdit: () => void;
   onDelete: () => void;
   deleting: boolean;
+  payFirst?: boolean;
 }
 
-export function DebtCard({ debt, onEdit, onDelete, deleting }: DebtCardProps) {
+export function DebtCard({ debt, onEdit, onDelete, deleting, payFirst }: DebtCardProps) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+    <div
+      className={`flex flex-col gap-3 rounded-xl border p-5 ${
+        payFirst
+          ? "border-emerald-400 bg-gradient-to-br from-emerald-50 to-white ring-1 ring-emerald-400 dark:border-emerald-600 dark:from-emerald-950/40 dark:to-zinc-900 dark:ring-emerald-600"
+          : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+      }`}
+    >
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="font-semibold text-zinc-900 dark:text-zinc-50">{debt.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-zinc-900 dark:text-zinc-50">{debt.name}</h3>
+            {payFirst && (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">
+                Pay this first
+              </span>
+            )}
+          </div>
           <span className="text-xs text-zinc-500 dark:text-zinc-400">
             {TYPE_LABELS[debt.type]}
             {debt.rateType === "FLAT" && " · flat rate"}

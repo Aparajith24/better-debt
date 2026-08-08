@@ -46,8 +46,8 @@ export default function BalanceTransferPage() {
   }
 
   return (
-    <div className="flex flex-1 justify-center bg-zinc-50 dark:bg-black">
-      <main className="w-full max-w-5xl px-6 py-8 lg:px-10">
+    <div className="flex flex-1 bg-zinc-50 dark:bg-black">
+      <main className="w-full px-6 py-8 lg:px-10">
         <Link href="/calculators" className="text-sm text-zinc-500 hover:underline">
           ← Calculators
         </Link>
