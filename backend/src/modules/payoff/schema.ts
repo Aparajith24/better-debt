@@ -61,3 +61,17 @@ export const prepaymentSchema = z.object({
 });
 
 export type PrepaymentInput = z.infer<typeof prepaymentSchema>;
+
+export const balanceTransferSchema = z.object({
+  currentBalance: z.number().positive(),
+  currentRateAnnual: z.number().nonnegative().max(100),
+  monthlyPayment: z.number().positive(),
+  transferFeeType: z.enum(["PERCENT", "FLAT"]).default("PERCENT"),
+  transferFeeValue: z.number().nonnegative(),
+  teaserRateAnnual: z.number().nonnegative().max(100),
+  teaserMonths: z.number().int().positive(),
+  postTeaserRateAnnual: z.number().nonnegative().max(100),
+  addFeeToBalance: z.boolean().default(true),
+});
+
+export type BalanceTransferInput = z.infer<typeof balanceTransferSchema>;

@@ -30,6 +30,12 @@ const CALCULATORS = [
     description:
       "A lump sum can lower your payment or shorten your tenure — see exactly what each is worth in saved interest.",
   },
+  {
+    href: "/calculators/balance-transfer",
+    title: "Balance transfer break-even",
+    description:
+      "Weigh a transfer fee against a teaser rate — see exactly which month the interest saved covers the fee.",
+  },
 ];
 
 export default function CalculatorsPage() {

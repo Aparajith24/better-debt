@@ -1,10 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { projectSingleDebtPayoff } from "../../lib/amortization.js";
+import { calculateBalanceTransferBreakEven } from "../../lib/balanceTransfer.js";
 import { projectCreditCardComparison } from "../../lib/creditCardPayoff.js";
 import { simulateMultiDebtPayoff } from "../../lib/multiDebtPayoff.js";
 import { calculatePrepaymentImpact } from "../../lib/prepayment.js";
 import { normalizeFlatRateToAPR, resolveEffectiveAnnualRate } from "../../lib/rateNormalization.js";
 import {
+  balanceTransferSchema,
   creditCardProjectionSchema,
   normalizeFlatRateSchema,
   payoffPlanSchema,
@@ -100,6 +102,39 @@ export async function payoffRoutes(app: FastifyInstance) {
       req.body,
     );
     const result = calculatePrepaymentImpact(balance, interestRateAnnual, monthlyPayment, lumpSum);
+    return reply.send(result);
+  });
+
+  // Balance transfer / refinance break-even: a transfer fee upfront buys a
+  // teaser rate that reverts to a regular APR after a fixed window. Break-even
+  // is when the interest saved by the lower rate has covered the fee — not
+  // just whether the new rate is lower.
+  app.post("/calculators/balance-transfer", async (req, reply) => {
+    const {
+      currentBalance,
+      currentRateAnnual,
+      monthlyPayment,
+      transferFeeType,
+      transferFeeValue,
+      teaserRateAnnual,
+      teaserMonths,
+      postTeaserRateAnnual,
+      addFeeToBalance,
+    } = balanceTransferSchema.parse(req.body);
+
+    const fee =
+      transferFeeType === "PERCENT" ? (currentBalance * transferFeeValue) / 100 : transferFeeValue;
+
+    const result = calculateBalanceTransferBreakEven(
+      currentBalance,
+      currentRateAnnual,
+      monthlyPayment,
+      fee,
+      teaserRateAnnual,
+      teaserMonths,
+      postTeaserRateAnnual,
+      addFeeToBalance,
+    );
     return reply.send(result);
   });
 }

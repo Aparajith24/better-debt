@@ -156,6 +156,17 @@ export interface PrepaymentComparison {
   };
 }
 
+export interface BalanceTransferResult {
+  fee: string;
+  transferredBalance: string;
+  staying: SingleDebtProjection;
+  transferred: SingleDebtProjection;
+  breakEvenMonths: number | null;
+  interestSaved: string;
+  netSavings: string;
+  worthIt: boolean;
+}
+
 export const api = {
   listDebts: () => request<Debt[]>("/debts"),
   getDebt: (id: string) => request<Debt>(`/debts/${id}`),
@@ -209,6 +220,22 @@ export const api = {
     lumpSum: number;
   }) =>
     request<PrepaymentComparison>("/calculators/prepayment", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+
+  balanceTransfer: (input: {
+    currentBalance: number;
+    currentRateAnnual: number;
+    monthlyPayment: number;
+    transferFeeType: "PERCENT" | "FLAT";
+    transferFeeValue: number;
+    teaserRateAnnual: number;
+    teaserMonths: number;
+    postTeaserRateAnnual: number;
+    addFeeToBalance?: boolean;
+  }) =>
+    request<BalanceTransferResult>("/calculators/balance-transfer", {
       method: "POST",
       body: JSON.stringify(input),
     }),
