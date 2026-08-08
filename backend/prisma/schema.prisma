@@ -37,3 +37,27 @@ model Debt {
   updatedAt DateTime @updatedAt
   @@index([userId])
 }
+
+// A "should I take this loan" check — stores the terms the user confirmed and
+// the computed true-cost verdict, never the raw offer document itself.
+model LoanOfferCheck {
+  id                       String   @id @default(uuid())
+  userId                   String
+  lenderName               String?
+  loanType                 DebtType @default(OTHER)
+  principal                Decimal  @db.Decimal(14, 2)
+  tenureMonths             Int
+  rateType                 RateType @default(REDUCING)
+  quotedRateAnnual         Decimal  @db.Decimal(6, 3)
+  processingFeeValue       Decimal  @db.Decimal(10, 2)
+  otherUpfrontFees         Decimal  @db.Decimal(10, 2) @default(0)
+  prepaymentPenaltyPercent Decimal? @db.Decimal(5, 2)
+  teaserRateAnnual         Decimal? @db.Decimal(6, 3)
+  teaserMonths             Int?
+  postTeaserRateAnnual     Decimal? @db.Decimal(6, 3)
+  trueApr                  Decimal  @db.Decimal(6, 3)
+  tier                     String   // GREAT | FAIR | HIGH_COST | PREDATORY
+  redFlags                 Json
+  createdAt                DateTime @default(now())
+  @@index([userId])
+}

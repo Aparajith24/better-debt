@@ -3,6 +3,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { ZodError } from "zod";
 import { debtRoutes } from "./modules/debts/routes.js";
+import { loanOfferRoutes } from "./modules/loanOffers/routes.js";
 import { payoffRoutes } from "./modules/payoff/routes.js";
 
 const app = Fastify({
@@ -28,6 +29,7 @@ app.get("/health", async () => ({ ok: true }));
 
 await app.register(debtRoutes);
 await app.register(payoffRoutes);
+await app.register(loanOfferRoutes);
 
 const port = Number(process.env.PORT ?? 3001);
 app.listen({ port, host: "0.0.0.0" }).catch((err) => {
