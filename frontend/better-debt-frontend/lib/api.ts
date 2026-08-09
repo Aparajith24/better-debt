@@ -60,6 +60,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// No Content-Type header here — the browser sets the multipart boundary
+// itself when the body is a FormData instance.
+async function requestFormData<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, { method: "POST", body: form });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new ApiError(body.error ?? `Request failed with status ${res.status}`, body.issues);
+  }
+
+  return res.json() as Promise<T>;
+}
+
 // ---- Calculators ----
 
 export interface SingleDebtProjection {
@@ -167,6 +180,76 @@ export interface BalanceTransferResult {
   worthIt: boolean;
 }
 
+// ---- Loan offer check ----
+
+export interface LoanOfferTermsInput {
+  lenderName?: string;
+  loanType: DebtType;
+  principal: number;
+  tenureMonths: number;
+  rateType: RateType;
+  quotedRateAnnual: number;
+  processingFeeValue: number;
+  otherUpfrontFees: number;
+  prepaymentPenaltyPercent?: number;
+  teaserRateAnnual?: number;
+  teaserMonths?: number;
+  postTeaserRateAnnual?: number;
+}
+
+// A best-effort guess at an offer's terms, read off the PDF by pattern
+// matching — anything it couldn't find is null, with a note explaining what
+// to fill in. Never trusted directly; the user reviews/corrects it first.
+export interface ExtractedLoanTerms {
+  lenderName: string | null;
+  loanType: DebtType | null;
+  principal: number | null;
+  tenureMonths: number | null;
+  rateType: RateType | null;
+  quotedRateAnnual: number | null;
+  processingFeeValue: number | null;
+  otherUpfrontFees: number | null;
+  prepaymentPenaltyPercent: number | null;
+  teaserRateAnnual: number | null;
+  teaserMonths: number | null;
+  postTeaserRateAnnual: number | null;
+  notes: string[];
+}
+
+export interface LoanExtractionResult {
+  extracted: ExtractedLoanTerms;
+  documentTextLength: number;
+}
+
+export type LoanOfferTier = "GREAT" | "FAIR" | "HIGH_COST" | "PREDATORY";
+
+export interface LoanOfferCheck {
+  id: string;
+  userId: string;
+  lenderName: string | null;
+  loanType: DebtType;
+  principal: string;
+  tenureMonths: number;
+  rateType: RateType;
+  quotedRateAnnual: string;
+  processingFeeValue: string;
+  otherUpfrontFees: string;
+  prepaymentPenaltyPercent: string | null;
+  teaserRateAnnual: string | null;
+  teaserMonths: number | null;
+  postTeaserRateAnnual: string | null;
+  trueApr: string;
+  tier: LoanOfferTier;
+  redFlags: string[];
+  createdAt: string;
+}
+
+export interface LoanOfferCheckResult extends LoanOfferCheck {
+  baseEmi: string;
+  totalUpfrontFees: string;
+  totalRepayment: string;
+}
+
 export const api = {
   listDebts: () => request<Debt[]>("/debts"),
   getDebt: (id: string) => request<Debt>(`/debts/${id}`),
@@ -239,4 +322,18 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input),
     }),
+
+  extractLoanOffer: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return requestFormData<LoanExtractionResult>("/loan-offers/extract", form);
+  },
+
+  scoreLoanOffer: (input: LoanOfferTermsInput) =>
+    request<LoanOfferCheckResult>("/loan-offers", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+
+  listLoanOffers: () => request<LoanOfferCheck[]>("/loan-offers"),
 };

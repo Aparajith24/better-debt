@@ -3,6 +3,7 @@ import {
   api,
   type Debt,
   type DebtInput,
+  type LoanOfferTermsInput,
   type PayoffPlanComparison,
   type PayoffPlanDebtInput,
 } from "./api";
@@ -69,4 +70,24 @@ export function usePayoffPlan(debts: Debt[]) {
     queryFn: () => api.payoffPlan({ debts: payload, extraMonthlyBudget: 0 }),
     enabled: ready,
   });
+}
+
+export const loanOfferKeys = {
+  all: ["loan-offers"] as const,
+};
+
+export function useExtractLoanOffer() {
+  return useMutation({ mutationFn: (file: File) => api.extractLoanOffer(file) });
+}
+
+export function useScoreLoanOffer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: LoanOfferTermsInput) => api.scoreLoanOffer(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: loanOfferKeys.all }),
+  });
+}
+
+export function useLoanOfferHistory() {
+  return useQuery({ queryKey: loanOfferKeys.all, queryFn: api.listLoanOffers });
 }
