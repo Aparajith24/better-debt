@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   api,
+  type AffordabilityCheckInput,
   type Debt,
   type DebtInput,
   type LoanOfferTermsInput,
@@ -90,4 +91,8 @@ export function useScoreLoanOffer() {
 
 export function useLoanOfferHistory() {
   return useQuery({ queryKey: loanOfferKeys.all, queryFn: api.listLoanOffers });
+}
+
+export function useCheckAffordability() {
+  return useMutation({ mutationFn: (input: AffordabilityCheckInput) => api.checkAffordability(input) });
 }

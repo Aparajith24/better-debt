@@ -1,8 +1,15 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { ApiError, type DebtType, type ExtractedLoanTerms, type LoanOfferCheckResult, type RateType } from "@/lib/api";
-import { useExtractLoanOffer, useScoreLoanOffer } from "@/lib/queries";
+import {
+  ApiError,
+  type AffordabilityResult,
+  type DebtType,
+  type ExtractedLoanTerms,
+  type LoanOfferCheckResult,
+  type RateType,
+} from "@/lib/api";
+import { useCheckAffordability, useExtractLoanOffer, useScoreLoanOffer } from "@/lib/queries";
 import { formatCurrency } from "@/lib/format";
 import { InfoTooltip } from "@/components/InfoTooltip";
 
@@ -338,7 +345,12 @@ export default function LoanOfferCheckPage() {
             )}
           </div>
 
-          {result && <ResultView result={result} />}
+          {result && (
+            <div className="flex flex-col gap-4">
+              <ResultView result={result} />
+              <AffordabilityPanel result={result} />
+            </div>
+          )}
         </div>
       </main>
     </div>
@@ -419,6 +431,130 @@ function ResultView({ result }: { result: LoanOfferCheckResult }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+const VERDICT_STYLES: Record<AffordabilityResult["verdict"], { wrap: string; label: string }> = {
+  GOOD_TIME: {
+    wrap: "border-emerald-400/30 bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-600 dark:border-emerald-500/30 dark:from-emerald-700 dark:via-emerald-600 dark:to-teal-700",
+    label: "This looks affordable",
+  },
+  TIGHT: {
+    wrap: "border-amber-400/30 bg-gradient-to-br from-amber-500 via-amber-500 to-yellow-500 dark:border-amber-500/30 dark:from-amber-600 dark:via-amber-600 dark:to-yellow-600",
+    label: "Workable, but tight",
+  },
+  NOT_RECOMMENDED: {
+    wrap: "border-red-400/30 bg-gradient-to-br from-red-600 via-red-600 to-rose-700 dark:border-red-500/30 dark:from-red-700 dark:via-red-700 dark:to-rose-800",
+    label: "Not recommended right now",
+  },
+};
+
+// A different question from the True Cost Score above: that card says
+// whether the loan itself is a good deal, this one says whether *this
+// borrower* can actually handle the payment — grounded only in their own
+// income and existing obligations, never a lender's product listing.
+function AffordabilityPanel({ result }: { result: LoanOfferCheckResult }) {
+  const [monthlyIncome, setMonthlyIncome] = useState("");
+  const [existingMonthlyDebtPayments, setExistingMonthlyDebtPayments] = useState("");
+  const [verdict, setVerdict] = useState<AffordabilityResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const checkAffordability = useCheckAffordability();
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    try {
+      const checked = await checkAffordability.mutateAsync({
+        monthlyIncome: Number(monthlyIncome),
+        existingMonthlyDebtPayments: Number(existingMonthlyDebtPayments) || 0,
+        desiredPrincipal: Number(result.principal),
+        desiredTenureMonths: result.tenureMonths,
+        proposedRateAnnual: Number(result.trueApr),
+      });
+      setVerdict(checked);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not check affordability.");
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <h3 className="mb-1 flex items-center gap-1.5 font-semibold text-zinc-900 dark:text-zinc-50">
+        Can you actually afford this?
+        <InfoTooltip text="The True Cost Score above tells you whether this loan is a good deal. This tells you whether taking it right now would stretch your budget too thin — based only on your own income and what you already owe each month." />
+      </h3>
+      <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">
+        Uses this offer&apos;s {formatCurrency(result.principal)} amount, {result.tenureMonths}-month
+        tenure, and {Number(result.trueApr).toFixed(1)}% true APR.
+      </p>
+
+      {!verdict && (
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Your monthly income (₹)">
+            <input
+              required
+              type="number"
+              min={0}
+              step="0.01"
+              value={monthlyIncome}
+              onChange={(e) => setMonthlyIncome(e.target.value)}
+              className="input"
+            />
+          </Field>
+          <Field label="Existing monthly debt payments (₹)" info="The total of all your current EMIs, credit card minimums, and other loan payments — before this one.">
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={existingMonthlyDebtPayments}
+              onChange={(e) => setExistingMonthlyDebtPayments(e.target.value)}
+              className="input"
+              placeholder="0"
+            />
+          </Field>
+          <div className="sm:col-span-2">
+            <button
+              type="submit"
+              disabled={checkAffordability.isPending}
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+            >
+              {checkAffordability.isPending ? "Checking…" : "Check affordability"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {error && (
+        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+          {error}
+        </p>
+      )}
+
+      {verdict && (
+        <div className="flex flex-col gap-3">
+          <div className={`rounded-xl border p-5 text-white ${VERDICT_STYLES[verdict.verdict].wrap}`}>
+            <p className="text-sm font-semibold">{VERDICT_STYLES[verdict.verdict].label}</p>
+            {verdict.projectedDTI && (
+              <p className="mt-1 text-sm opacity-90">
+                This loan would bring your total debt payments to {verdict.projectedDTI}% of your
+                income.
+              </p>
+            )}
+            <ul className="mt-2 flex flex-col gap-1 text-sm opacity-90">
+              {verdict.reasons.map((reason) => (
+                <li key={reason}>• {reason}</li>
+              ))}
+            </ul>
+          </div>
+          <button
+            onClick={() => setVerdict(null)}
+            className="self-start text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+          >
+            Check different numbers
+          </button>
+        </div>
+      )}
     </div>
   );
 }

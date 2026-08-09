@@ -250,6 +250,28 @@ export interface LoanOfferCheckResult extends LoanOfferCheck {
   totalRepayment: string;
 }
 
+// ---- Affordability check ----
+
+export interface AffordabilityCheckInput {
+  monthlyIncome: number;
+  existingMonthlyDebtPayments: number;
+  desiredPrincipal: number;
+  desiredTenureMonths: number;
+  proposedRateAnnual?: number;
+}
+
+export type ReadinessVerdict = "GOOD_TIME" | "TIGHT" | "NOT_RECOMMENDED";
+
+export interface AffordabilityResult {
+  currentDTI: string;
+  maxAffordableMonthlyPayment: string;
+  maxAffordableAPR: string | null;
+  proposedMonthlyPayment: string | null;
+  projectedDTI: string | null;
+  verdict: ReadinessVerdict;
+  reasons: string[];
+}
+
 export const api = {
   listDebts: () => request<Debt[]>("/debts"),
   getDebt: (id: string) => request<Debt>(`/debts/${id}`),
@@ -336,4 +358,10 @@ export const api = {
     }),
 
   listLoanOffers: () => request<LoanOfferCheck[]>("/loan-offers"),
+
+  checkAffordability: (input: AffordabilityCheckInput) =>
+    request<AffordabilityResult>("/affordability/check", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
 };
