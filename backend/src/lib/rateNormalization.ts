@@ -17,7 +17,7 @@ export function reducingBalanceEMI(principal: number, monthlyRate: number, tenur
 // reducingBalanceEMI(principal, r, n) is strictly increasing in r, so we can
 // bisection-search for the monthly rate that reproduces a given EMI. This is
 // the same root-finding idea behind XIRR — no closed form, so we iterate.
-function solveMonthlyRateForEMI(principal: number, targetEMI: number, tenureMonths: number): number {
+export function solveMonthlyRateForEMI(principal: number, targetEMI: number, tenureMonths: number): number {
   let lo = 0;
   let hi = 2; // 200%/month upper bound — far beyond any real-world loan rate
   for (let i = 0; i < 100; i++) {
