@@ -1,6 +1,7 @@
 import "dotenv/config";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
 import { ZodError } from "zod";
 import { debtRoutes } from "./modules/debts/routes.js";
 import { loanOfferRoutes } from "./modules/loanOffers/routes.js";
@@ -15,6 +16,10 @@ const app = Fastify({
 await app.register(cors, {
   origin: true,
   methods: ["GET", "POST", "PATCH", "DELETE"],
+});
+
+await app.register(multipart, {
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB — plenty for a text-based loan offer PDF
 });
 
 app.setErrorHandler((err, req, reply) => {

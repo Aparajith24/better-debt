@@ -1,11 +1,36 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/db.js";
 import { DEV_USER_ID } from "../../lib/dev-user.js";
+import { extractLoanTermsFromPdf } from "../../lib/loanExtraction.js";
 import { evaluateLoanOffer } from "../../lib/trueCost.js";
 import { loanOfferTermsSchema } from "./schema.js";
 import { serializeLoanOfferCheck } from "./serialize.js";
 
 export async function loanOfferRoutes(app: FastifyInstance) {
+  // Reads a loan offer PDF and returns a best-effort guess at its terms for
+  // the user to review and correct — never scores or saves anything itself.
+  // The LLM only ever reads numbers off a page; the verdict always comes
+  // from the deterministic trueCost engine once the user confirms the terms.
+  app.post("/loan-offers/extract", async (req, reply) => {
+    const file = await req.file();
+    if (!file) {
+      return reply.status(400).send({ error: "No file uploaded" });
+    }
+    if (file.mimetype !== "application/pdf") {
+      return reply.status(400).send({ error: "Only PDF files are supported" });
+    }
+
+    const buffer = await file.toBuffer();
+    try {
+      const result = await extractLoanTermsFromPdf(buffer);
+      return reply.send(result);
+    } catch (err) {
+      req.log.error(err);
+      const message = err instanceof Error ? err.message : "Could not read this PDF";
+      return reply.status(422).send({ error: message });
+    }
+  });
+
   // Scores a loan/EMI/BNPL offer's terms (already confirmed by the user, not
   // raw extraction output) and saves the structured terms + verdict — never
   // the offer document itself.
