@@ -28,8 +28,9 @@ export interface LoanExtractionResult {
   documentTextLength: number;
 }
 
-const AMOUNT = String.raw`(?:rs\.?|inr|₹)\s?([\d,]+(?:\.\d+)?)`;
+const AMOUNT = String.raw`(?:rs\.?|inr|₹|\$)\s?([\d,]+(?:\.\d+)?)`;
 const PERCENT = String.raw`(\d+(?:\.\d+)?)\s?%`;
+const CURRENCY_GAP = String.raw`[^\d₹\$]{0,20}`;
 
 function firstMatch(text: string, pattern: RegExp): string | null {
   const match = text.match(pattern);
@@ -37,7 +38,7 @@ function firstMatch(text: string, pattern: RegExp): string | null {
 }
 
 function parseAmount(text: string, keywordPattern: string): number | null {
-  const raw = firstMatch(text, new RegExp(`${keywordPattern}[^\\d₹]{0,20}${AMOUNT}`, "i"));
+  const raw = firstMatch(text, new RegExp(`${keywordPattern}${CURRENCY_GAP}${AMOUNT}`, "i"));
   return raw ? Number(raw.replace(/,/g, "")) : null;
 }
 
@@ -56,19 +57,57 @@ function parsePercent(text: string, keywordPattern: string): number | null {
   return raw ? Number(raw) : null;
 }
 
-// Pattern-matches common phrasing in Indian consumer-loan / EMI / BNPL offer
-// letters. Free and offline, at the cost of missing anything phrased
-// unusually — the confirmation form is where the user catches that, not
-// this function.
+// Second-pass fallback for documents laid out as a labeled table — pdf-parse
+// keeps each "Label Value" table row as its own line (e.g. "Principal Amount
+// $25,000.00"), so a line-anchored label lookup catches fields the
+// free-prose regexes above miss because the sentence-style phrasing they
+// expect ("Rs. 30,000 loan amount", "18% flat rate") isn't how a structured
+// summary table reads.
+function labeledLineValue(text: string, labels: string[]): string | null {
+  for (const label of labels) {
+    const match = text.match(new RegExp(`^\\s*${label}\\s*[:\\-]?\\s+(.+)$`, "im"));
+    if (match) return match[1].trim();
+  }
+  return null;
+}
+
+function amountFromValue(value: string): number | null {
+  const match = value.match(new RegExp(AMOUNT, "i"));
+  return match ? Number(match[1].replace(/,/g, "")) : null;
+}
+
+function percentFromValue(value: string): number | null {
+  const match = value.match(new RegExp(PERCENT, "i"));
+  return match ? Number(match[1]) : null;
+}
+
+function monthsFromValue(value: string): number | null {
+  const match = value.match(/(\d+)\s*months?/i);
+  return match ? Number(match[1]) : null;
+}
+
+// Pattern-matches common loan/EMI/BNPL offer phrasing — both prose-style
+// letters ("Rs. 30,000 loan amount, 0% per annum") and labeled summary
+// tables ("Principal Amount $25,000.00"). Free and offline, at the cost of
+// missing anything phrased unusually — the confirmation form is where the
+// user catches that, not this function.
 function extractTermsFromText(text: string): ExtractedLoanTerms {
   const notes: string[] = [];
   const lower = text.toLowerCase();
 
-  const principal = parseAmount(text, "(?:loan amount|principal|sanctioned amount|amount)");
+  let principal = parseAmount(text, "(?:loan amount|principal|sanctioned amount|amount)");
+  if (principal === null) {
+    const raw = labeledLineValue(text, ["Principal Amount", "Loan Amount", "Amount Financed", "Principal"]);
+    principal = raw ? amountFromValue(raw) : null;
+  }
   if (principal === null) notes.push("Couldn't find the loan/principal amount — please fill it in.");
 
-  const tenureRaw = firstMatch(text, /tenure[^\d]{0,20}(\d+)\s*months?/i) ?? firstMatch(text, /(\d+)\s*months?\s*tenure/i);
-  const tenureMonths = tenureRaw ? Number(tenureRaw) : null;
+  let tenureMonths =
+    Number(firstMatch(text, /tenure[^\d]{0,20}(\d+)\s*months?/i) ?? firstMatch(text, /(\d+)\s*months?\s*tenure/i) ?? "") || null;
+  if (tenureMonths === null) {
+    const raw = labeledLineValue(text, ["Loan Term", "Tenure", "Repayment Period", "Term"]);
+    tenureMonths = raw ? monthsFromValue(raw) : null;
+  }
   if (tenureMonths === null) notes.push("Couldn't find the tenure in months — please fill it in.");
 
   const isNoCost = /no[-\s]?cost emi|0\s?%\s*(?:emi|interest|p\.?a\.?)/i.test(text);
@@ -87,18 +126,40 @@ function extractTermsFromText(text: string): ExtractedLoanTerms {
     if (pa) {
       rateType = "REDUCING";
       quotedRateAnnual = Number(pa);
+    } else {
+      // No "flat rate" or "X% per annum" phrasing found — try a labeled
+      // rate field. Absent an explicit flat-rate statement, a stated rate
+      // is treated as reducing-balance, which is what an amortization
+      // table (interest computed on the declining balance) implies.
+      const raw = labeledLineValue(text, [
+        "Annual Interest Rate",
+        "Interest Rate",
+        "Rate of Interest",
+        "APR",
+      ]);
+      const rate = raw ? percentFromValue(raw) : null;
+      if (rate !== null) {
+        rateType = "REDUCING";
+        quotedRateAnnual = rate;
+      }
     }
   }
   if (rateType === null || quotedRateAnnual === null) {
     notes.push("Couldn't determine the interest rate or whether it's flat/reducing — please fill it in.");
   }
 
-  const processingFeeValue = parseAmount(text, "processing\\s+fee");
+  let processingFeeValue = parseAmount(text, "processing\\s+fee");
+  if (processingFeeValue === null) {
+    const raw = labeledLineValue(text, ["Processing Fee", "Origination Fee", "Application Fee", "Loan Fee"]);
+    processingFeeValue = raw ? amountFromValue(raw) : null;
+  }
   if (processingFeeValue === null && !/no processing fee|processing fee.{0,10}(?:nil|waived|free)/i.test(lower)) {
     notes.push("Couldn't find a processing fee amount — check the document for one and fill it in if present.");
   }
 
-  const otherFeeMatches = [...text.matchAll(new RegExp(`(?:documentation|convenience|handling|admin(?:istration)?)\\s+fee[^\\d₹]{0,20}${AMOUNT}`, "gi"))];
+  const otherFeeMatches = [
+    ...text.matchAll(new RegExp(`(?:documentation|convenience|handling|admin(?:istration)?)\\s+fee${CURRENCY_GAP}${AMOUNT}`, "gi")),
+  ];
   const otherUpfrontFees = otherFeeMatches.length > 0
     ? otherFeeMatches.reduce((sum, m) => sum + Number(m[1].replace(/,/g, "")), 0)
     : 0;
@@ -116,7 +177,10 @@ function extractTermsFromText(text: string): ExtractedLoanTerms {
   else if (/emi/i.test(lower)) loanType = "EMI";
   else if (/personal loan/i.test(lower)) loanType = "PERSONAL_LOAN";
 
-  const lenderName = firstMatch(text, /^([A-Z][A-Za-z&.\s]{2,60}(?:Pvt\.?\s?Ltd\.?|Limited|Finance|Bank|NBFC))/m);
+  let lenderName = firstMatch(text, /^([A-Z][A-Za-z&.\s]{2,60}(?:Pvt\.?\s?Ltd\.?|Limited|Finance|Bank|NBFC))/m);
+  if (!lenderName) {
+    lenderName = labeledLineValue(text, ["Lender Name", "Lender", "Bank Name", "Financial Institution"]);
+  }
   if (!lenderName) notes.push("Couldn't identify the lender name — please fill it in.");
 
   return extractedTermsSchema.parse({
