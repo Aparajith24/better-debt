@@ -128,16 +128,3 @@ APR can be worked out — see the flat-rate calculator below.
 | Method | Path | What it does |
 |---|---|---|
 | POST | `/affordability/check` | Debt-to-income readiness verdict + personalized max-affordable-APR ceiling, given income, existing debt payments, and a desired principal/tenure (optionally judged against a specific proposed rate) |
-
-## Current status
-
-Working: debt CRUD; all six payoff/cost calculators (backend + frontend); a
-dashboard with an auto-computed payoff hero card, TanStack Query data
-fetching, and a payoff-plan page with a balance-over-time chart and
-month-by-month payment table; the loan offer check flow (PDF upload → free
-regex extraction → review → true-cost scoring → history); and the
-affordability check, wired into the loan-offer-check result.
-
-Not yet built: real auth, a persistent/trackable payoff plan (save a chosen
-strategy and track actual progress against it), OCR for scanned (non-text)
-PDFs, and automated tests for the payoff/scoring math.
