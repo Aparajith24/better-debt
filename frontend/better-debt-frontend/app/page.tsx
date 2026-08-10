@@ -3,10 +3,18 @@
 import { useState } from "react";
 import type { Debt, DebtInput } from "@/lib/api";
 import { ApiError } from "@/lib/api";
-import { useCreateDebt, useDebts, useDeleteDebt, usePayoffPlan, useUpdateDebt } from "@/lib/queries";
+import {
+  useActiveTrackedPlan,
+  useCreateDebt,
+  useDebts,
+  useDeleteDebt,
+  usePayoffPlan,
+  useUpdateDebt,
+} from "@/lib/queries";
 import { DebtForm } from "@/components/DebtForm";
 import { DebtCard } from "@/components/DebtCard";
 import { PayoffHero } from "@/components/PayoffHero";
+import { TrackedPlanCard, TrackedPlanCta } from "@/components/TrackedPlanCard";
 import { formatCurrency } from "@/lib/format";
 
 type ViewState = { mode: "list" } | { mode: "create" } | { mode: "edit"; debt: Debt };
@@ -14,6 +22,7 @@ type ViewState = { mode: "list" } | { mode: "create" } | { mode: "edit"; debt: D
 export default function Home() {
   const { data: debts = [], isLoading, error: loadQueryError } = useDebts();
   const payoffPlan = usePayoffPlan(debts);
+  const trackedPlan = useActiveTrackedPlan();
   const createDebt = useCreateDebt();
   const updateDebt = useUpdateDebt();
   const deleteDebt = useDeleteDebt();
@@ -76,6 +85,14 @@ export default function Home() {
 
         {payoffPlan.data && view.mode === "list" && (
           <PayoffHero plan={payoffPlan.data} nameFor={nameFor} />
+        )}
+
+        {view.mode === "list" && debts.length > 0 && (
+          trackedPlan.data ? (
+            <TrackedPlanCard data={trackedPlan.data} />
+          ) : (
+            !trackedPlan.isLoading && <TrackedPlanCta />
+          )
         )}
 
         {debts.length > 0 && (

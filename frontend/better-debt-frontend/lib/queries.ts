@@ -7,6 +7,7 @@ import {
   type LoanOfferTermsInput,
   type PayoffPlanComparison,
   type PayoffPlanDebtInput,
+  type TrackedPlanDebtInput,
 } from "./api";
 
 export const debtKeys = {
@@ -95,4 +96,32 @@ export function useLoanOfferHistory() {
 
 export function useCheckAffordability() {
   return useMutation({ mutationFn: (input: AffordabilityCheckInput) => api.checkAffordability(input) });
+}
+
+export const trackedPlanKeys = {
+  active: ["tracked-plan", "active"] as const,
+};
+
+export function useActiveTrackedPlan() {
+  return useQuery({ queryKey: trackedPlanKeys.active, queryFn: api.getActiveTrackedPlan });
+}
+
+export function useCreateTrackedPlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      debts: TrackedPlanDebtInput[];
+      extraMonthlyBudget: number;
+      strategy: "avalanche" | "snowball";
+    }) => api.createTrackedPlan(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: trackedPlanKeys.active }),
+  });
+}
+
+export function useAbandonTrackedPlan() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.abandonTrackedPlan(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: trackedPlanKeys.active }),
+  });
 }

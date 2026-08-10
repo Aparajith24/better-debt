@@ -272,6 +272,54 @@ export interface AffordabilityResult {
   reasons: string[];
 }
 
+// ---- Trackable payoff plan ----
+
+export interface TrackedPlanDebtInput {
+  id: string;
+  name: string;
+  balance: number;
+  rateType?: RateType;
+  interestRateAnnual: number;
+  minPayment: number;
+  principal?: number;
+  tenureMonths?: number;
+}
+
+export type PlanStatus = "ACTIVE" | "COMPLETED" | "ABANDONED";
+export type ProgressStatus = "AHEAD" | "ON_TRACK" | "BEHIND" | "COMPLETED";
+
+export interface TrackedPayoffPlan {
+  id: string;
+  userId: string;
+  strategy: "avalanche" | "snowball";
+  extraMonthlyBudget: string;
+  status: PlanStatus;
+  startDate: string;
+  totalMonths: number;
+  totalInterestPaid: string;
+  totalPaid: string;
+  payoffOrder: string[];
+  monthlySummary: MultiDebtPlan["monthlySummary"];
+  debtNames: Record<string, string>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlanProgress {
+  elapsedMonths: number;
+  totalMonths: number;
+  expectedBalance: string;
+  actualBalance: string;
+  delta: string;
+  status: ProgressStatus;
+  missingDebtIds: string[];
+}
+
+export interface ActiveTrackedPlan {
+  plan: TrackedPayoffPlan;
+  progress: PlanProgress;
+}
+
 export const api = {
   listDebts: () => request<Debt[]>("/debts"),
   getDebt: (id: string) => request<Debt>(`/debts/${id}`),
@@ -364,4 +412,19 @@ export const api = {
       method: "POST",
       body: JSON.stringify(input),
     }),
+
+  createTrackedPlan: (input: {
+    debts: TrackedPlanDebtInput[];
+    extraMonthlyBudget: number;
+    strategy: "avalanche" | "snowball";
+  }) =>
+    request<ActiveTrackedPlan>("/payoff-plans", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+
+  getActiveTrackedPlan: () => request<ActiveTrackedPlan | null>("/payoff-plans/active"),
+
+  abandonTrackedPlan: (id: string) =>
+    request<TrackedPayoffPlan>(`/payoff-plans/${id}/abandon`, { method: "POST" }),
 };

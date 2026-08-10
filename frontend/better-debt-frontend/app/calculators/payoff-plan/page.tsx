@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, ApiError, type Debt, type PayoffPlanComparison } from "@/lib/api";
+import { useCreateTrackedPlan } from "@/lib/queries";
 import { formatCurrency } from "@/lib/format";
 import { BalanceChart } from "@/components/BalanceChart";
 import { MonthlyPaymentTable } from "@/components/MonthlyPaymentTable";
@@ -164,7 +165,11 @@ export default function PayoffPlanPage() {
               )}
             </div>
 
-            <div>{result && <ResultView result={result} debts={debts} />}</div>
+            <div>
+              {result && (
+                <ResultView result={result} debts={debts} extraMonthlyBudget={Number(extraBudget) || 0} />
+              )}
+            </div>
           </div>
         )}
       </main>
@@ -212,7 +217,15 @@ function getRecommendation(result: PayoffPlanComparison): Recommendation {
   };
 }
 
-function ResultView({ result, debts }: { result: PayoffPlanComparison; debts: Debt[] }) {
+function ResultView({
+  result,
+  debts,
+  extraMonthlyBudget,
+}: {
+  result: PayoffPlanComparison;
+  debts: Debt[];
+  extraMonthlyBudget: number;
+}) {
   const nameFor = (id: string) => debts.find((d) => d.id === id)?.name ?? id;
   const recommendation = getRecommendation(result);
   const defaultStrategy = recommendation.winner === "snowball" ? "snowball" : "avalanche";
@@ -245,15 +258,21 @@ function ResultView({ result, debts }: { result: PayoffPlanComparison; debts: De
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StrategyCard
           title="Avalanche"
+          strategy="avalanche"
           plan={result.avalanche}
           nameFor={nameFor}
           highlight={recommendation.winner === "avalanche" || recommendation.winner === "tie"}
+          debts={debts}
+          extraMonthlyBudget={extraMonthlyBudget}
         />
         <StrategyCard
           title="Snowball"
+          strategy="snowball"
           plan={result.snowball}
           nameFor={nameFor}
           highlight={recommendation.winner === "snowball" || recommendation.winner === "tie"}
+          debts={debts}
+          extraMonthlyBudget={extraMonthlyBudget}
         />
       </div>
 
@@ -271,15 +290,44 @@ function ResultView({ result, debts }: { result: PayoffPlanComparison; debts: De
 
 function StrategyCard({
   title,
+  strategy,
   plan,
   nameFor,
   highlight,
+  debts,
+  extraMonthlyBudget,
 }: {
   title: string;
+  strategy: "avalanche" | "snowball";
   plan: PayoffPlanComparison["avalanche"];
   nameFor: (id: string) => string;
   highlight?: boolean;
+  debts: Debt[];
+  extraMonthlyBudget: number;
 }) {
+  const createTrackedPlan = useCreateTrackedPlan();
+
+  async function handleSave() {
+    // `debts` is every debt loaded on this page, not just the ones the user
+    // selected for this comparison — filter down to what this plan actually
+    // includes so the saved snapshot matches what's on screen.
+    const included = new Set(plan.payoffOrder);
+    await createTrackedPlan.mutateAsync({
+      strategy,
+      extraMonthlyBudget,
+      debts: debts.filter((d) => included.has(d.id)).map((d) => ({
+        id: d.id,
+        name: d.name,
+        balance: Number(d.currentBalance),
+        rateType: d.rateType,
+        interestRateAnnual: Number(d.interestRateAnnual),
+        minPayment: Number(d.minPayment ?? 0),
+        principal: d.principal ? Number(d.principal) : undefined,
+        tenureMonths: d.tenureMonths ?? undefined,
+      })),
+    });
+  }
+
   return (
     <div
       className={`rounded-xl border p-5 ${
@@ -288,7 +336,29 @@ function StrategyCard({
           : "border-zinc-200 dark:border-zinc-800"
       } bg-white dark:bg-zinc-900`}
     >
-      <h3 className="mb-3 font-semibold text-zinc-900 dark:text-zinc-50">{title}</h3>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="font-semibold text-zinc-900 dark:text-zinc-50">{title}</h3>
+        {createTrackedPlan.isSuccess ? (
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            Tracking ✓
+          </span>
+        ) : (
+          <button
+            onClick={handleSave}
+            disabled={createTrackedPlan.isPending}
+            className="rounded-md border border-zinc-300 px-2.5 py-1 text-xs font-medium text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
+          >
+            {createTrackedPlan.isPending ? "Saving…" : "Save & track this plan"}
+          </button>
+        )}
+      </div>
+      {createTrackedPlan.isError && (
+        <p className="mb-3 text-xs text-red-600 dark:text-red-400">
+          {createTrackedPlan.error instanceof ApiError
+            ? createTrackedPlan.error.message
+            : "Could not save this plan."}
+        </p>
+      )}
       <div className="mb-4 flex flex-col gap-1 text-sm">
         <p className="text-zinc-500 dark:text-zinc-400">
           Debt-free in{" "}

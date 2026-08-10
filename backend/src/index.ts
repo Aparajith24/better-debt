@@ -7,6 +7,7 @@ import { affordabilityRoutes } from "./modules/affordability/routes.js";
 import { debtRoutes } from "./modules/debts/routes.js";
 import { loanOfferRoutes } from "./modules/loanOffers/routes.js";
 import { payoffRoutes } from "./modules/payoff/routes.js";
+import { payoffPlanRoutes } from "./modules/payoffPlans/routes.js";
 
 const app = Fastify({
   logger: {
@@ -37,6 +38,7 @@ await app.register(debtRoutes);
 await app.register(payoffRoutes);
 await app.register(loanOfferRoutes);
 await app.register(affordabilityRoutes);
+await app.register(payoffPlanRoutes);
 
 const port = Number(process.env.PORT ?? 3001);
 app.listen({ port, host: "0.0.0.0" }).catch((err) => {

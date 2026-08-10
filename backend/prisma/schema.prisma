@@ -61,3 +61,24 @@ model LoanOfferCheck {
   createdAt                DateTime @default(now())
   @@index([userId])
 }
+
+// A committed-to avalanche/snowball plan, snapshotted at creation so progress
+// can be judged against the original trajectory even if debts are later
+// renamed, deleted, or a new plan replaces this one.
+model TrackedPayoffPlan {
+  id                 String   @id @default(uuid())
+  userId             String
+  strategy           String   // "avalanche" | "snowball"
+  extraMonthlyBudget Decimal  @db.Decimal(14, 2)
+  status             String   @default("ACTIVE") // ACTIVE | COMPLETED | ABANDONED
+  startDate          DateTime @default(now())
+  totalMonths        Int
+  totalInterestPaid  Decimal  @db.Decimal(14, 2)
+  totalPaid          Decimal  @db.Decimal(14, 2)
+  payoffOrder        Json     // string[] of debt ids, in payoff order
+  monthlySummary     Json     // MonthSummary[] snapshot from simulateMultiDebtPayoff
+  debtNames          Json     // { [debtId]: name } snapshot
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  @@index([userId])
+}
